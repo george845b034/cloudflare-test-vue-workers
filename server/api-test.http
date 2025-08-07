@@ -1,0 +1,44 @@
+### 健康檢查
+GET http://localhost:8787/
+
+### 取得所有 todos
+GET http://localhost:8787/api/todos
+
+### 建立新 todo
+POST http://localhost:8787/api/todos
+Content-Type: application/json
+
+{
+  "title": "學習 Cloudflare Workers",
+  "description": "使用 Hono 框架建立 API",
+  "completed": false
+}
+
+### 建立另一個 todo
+POST http://localhost:8787/api/todos
+Content-Type: application/json
+
+{
+  "title": "學習 D1 資料庫",
+  "description": "整合 SQLite 資料庫",
+  "completed": false
+}
+
+### 取得單一 todo (替換 {id} 為實際 ID)
+GET http://localhost:8787/api/todos/1
+
+### 更新 todo (替換 {id} 為實際 ID)
+PUT http://localhost:8787/api/todos/1
+Content-Type: application/json
+
+{
+  "title": "學習 Cloudflare Workers (已更新)",
+  "description": "使用 Hono 框架建立 API - 已完成",
+  "completed": true
+}
+
+### 切換 todo 完成狀態 (替換 {id} 為實際 ID)
+PATCH http://localhost:8787/api/todos/1/toggle
+
+### 刪除 todo (替換 {id} 為實際 ID)
+DELETE http://localhost:8787/api/todos/1
