@@ -15,6 +15,12 @@
 	"observability": {
 		"enabled": true
 	},
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "af6fb8bfa48840fb9d26cdd3441f1a03"
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",

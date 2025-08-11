@@ -1,6 +1,49 @@
 ### 健康檢查
 GET http://localhost:8787/
 
+### ----------------------
+### KV 基礎 CRUD / TTL / Metadata / List 測試
+### ----------------------
+
+### KV set (text)
+POST http://localhost:8787/api/kv/set
+Content-Type: application/json
+
+{
+  "key": "demo:text:hello",
+  "value": "world",
+  "as": "text",
+  "ttl": 60,
+  "metadata": {"note": "text with ttl=60"}
+}
+
+### KV get (text)
+GET http://localhost:8787/api/kv/get/demo:text:hello?type=text
+
+### KV set (json)
+POST http://localhost:8787/api/kv/set
+Content-Type: application/json
+
+{
+  "key": "demo:json:user:1",
+  "value": {"id": 1, "name": "George"},
+  "as": "json",
+  "metadata": {"role": "admin"}
+}
+
+### KV get (json)
+GET http://localhost:8787/api/kv/get/demo:json:user:1?type=json
+
+### KV list (prefix)
+GET http://localhost:8787/api/kv/list?prefix=demo:
+
+### KV list (分頁: 帶 cursor)
+# 先取上一個 list 回應的 cursor 值替換 {cursor}
+GET http://localhost:8787/api/kv/list?prefix=demo:&cursor={cursor}
+
+### KV delete
+DELETE http://localhost:8787/api/kv/demo:text:hello
+
 ### 取得所有 todos
 GET http://localhost:8787/api/todos
 

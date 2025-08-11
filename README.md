@@ -1,121 +1,164 @@
 # Cloudflare Vue Workers 測試專案
 
-這個專案用來測試 Cloudflare Workers、Pages 和 D1 的整合。
+以 Vue 3 + Hono (Cloudflare Workers) 實作前後端，整合 D1 與 KV，並提供 SPA 靜態資產發佈至 Workers Assets。
 
-## 專案結構
+## 專案結構（已採用 Routes → Controllers → Repositories 分層）
 
 ```
 test_vue_workers/
-├── frontend/          # Vue.js 前端
-├── server/            # Cloudflare Workers (Hono)
-│   ├── index.ts       # 主要 API 檔案
-│   ├── types.ts       # TypeScript 類型定義
-│   └── api-test.http  # API 測試檔案
-├── database/          # D1 資料庫相關
-│   └── schema.sql     # 資料庫 schema
-├── migrations/        # D1 遷移檔案
-├── wrangler.jsonc     # Cloudflare 配置
+├── server/
+│   ├── index.ts                # Workers 入口：掛載 CORS、/api、靜態資產
+│   ├── types.ts                # 共用型別（Env、Todo、API 回應）
+│   ├── api-test.http           # API 測試腳本
+│   ├── routes/                 # 路由：僅做路由註冊
+│   │   ├── kvRoutes.ts         # /api/kv/*
+│   │   └── todoRoutes.ts       # /api/todos/*
+│   ├── controllers/            # 控制器：解析請求/回應與業務規則
+│   │   ├── kvController.ts
+│   │   └── todoController.ts
+│   └── repositories/           # 資料層：存取 D1/KV
+│       ├── kvRepository.ts
+│       └── todoRepository.ts
+├── src/                        # Vue 前端（Vite）
+├── public/                     # 靜態資產（開發期）
+├── dist/client/                # 前端 build 輸出（被 Workers 當成 Assets）
+├── database/                   # D1 相關 SQL
+│   └── schema.sql
+├── migrations/                 # D1 Migrations（已存在的 SQL 遷移檔）
+├── wrangler.jsonc              # Workers 設定（assets/DB/KV 綁定）
 └── README.md
 ```
 
 ## 技術棧
 
-- **前端**: Vue.js 3
-- **後端**: Cloudflare Workers + Hono
-- **資料庫**: Cloudflare D1 (SQLite)
-- **部署**: Cloudflare Pages
+- 前端：Vue 3、Vite
+- 後端：Cloudflare Workers + Hono
+- 儲存：Cloudflare D1（SQLite）、Cloudflare KV
+- 發佈：Workers（以 Assets 提供 SPA 靜態檔）
+
+## 環境需求
+
+- Node.js 20.19+ 或 22.12+
+- Wrangler CLI
 
 ## 快速開始
 
-### 1. 安裝 Wrangler CLI
-```bash
-npm install -g wrangler
-```
-
-### 2. 登入 Cloudflare
-```bash
-wrangler login
-```
-
-### 3. 安裝依賴
+1) 安裝依賴
 ```bash
 npm install
 ```
 
-### 4. 啟動開發環境
+2) 登入 Cloudflare（首次）
 ```bash
-# 啟動 Workers 開發環境
-wrangler dev
-
-# 啟動前端開發環境
-npm run dev
+wrangler login
 ```
 
-## Todo API 端點
+3) 開發模式
+- 前端熱更新（Vite）：
+```bash
+npm run dev
+```
+- Workers 後端（需先完成一次前端 build 以提供資產給 Workers）：
+```bash
+npm run build-only
+wrangler dev
+```
 
-### 基礎端點
-- `GET /` - 健康檢查
-- `GET /api/todos` - 取得所有 todos
-- `GET /api/todos/:id` - 取得單一 todo
-- `POST /api/todos` - 建立新 todo
-- `PUT /api/todos/:id` - 更新 todo
-- `DELETE /api/todos/:id` - 刪除 todo
-- `PATCH /api/todos/:id/toggle` - 切換 todo 完成狀態
+4) 一鍵預覽（先 build 再啟動 Workers）
+```bash
+npm run preview
+```
 
-### Todo 資料結構
-```typescript
+5) 部署
+```bash
+npm run deploy
+```
+
+## API 一覽
+
+### 健康檢查
+- `GET /api/` → `{ message: 'Todo API is running!' }`
+
+### KV（前綴：`/api/kv`）
+- `POST /set` body: `{ key, value, as?: 'text'|'json', ttl?: number, metadata?: object }`
+- `GET /get/:key?type=text|json` → `{ value, metadata }`
+- `GET /list?prefix&limit&cursor` → KV 列表結果
+- `DELETE /:key` → 刪除 key
+
+### Todos（前綴：`/api/todos`）
+- `GET /` → 取得所有 todos
+- `GET /:id` → 取得單一 todo
+- `POST /` body: `{ title, description?, completed? }`
+- `PUT /:id` body: `Partial<Todo>`
+- `DELETE /:id`
+- `PATCH /:id/toggle`
+
+Todo 型別：
+```ts
 interface Todo {
-  id?: number;
-  title: string;
-  description?: string;
-  completed: boolean;
-  created_at?: string;
-  updated_at?: string;
+  id?: number
+  title: string
+  description?: string
+  completed: boolean
+  created_at?: string
+  updated_at?: string
 }
 ```
 
-### 範例請求
+## 測試方式
 
-#### 建立新 todo
+- 使用 `server/api-test.http` 可直接在 IDE（VS Code、Cursor）中逐段發送請求
+- 或使用 curl：
 ```bash
 curl -X POST http://localhost:8787/api/todos \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "學習 Cloudflare Workers",
-    "description": "使用 Hono 框架建立 API",
-    "completed": false
-  }'
+  -d '{"title":"學習 Cloudflare Workers","description":"使用 Hono","completed":false}'
 ```
 
-#### 取得所有 todos
-```bash
-curl http://localhost:8787/api/todos
-```
+## D1 與 KV 設定
 
-#### 切換 todo 完成狀態
-```bash
-curl -X PATCH http://localhost:8787/api/todos/1/toggle
-```
+- wrangler 綁定（節錄 `wrangler.jsonc`）：
+  - `assets.directory`: `./dist/client/`（對應 `npm run build-only` 的輸出）
+  - `d1_databases[0].binding`: `DB`
+  - `kv_namespaces[0].binding`: `KV`
 
-## 資料庫管理
-
-### 執行遷移
+### D1 Migrations（套用既有遷移檔）
 ```bash
-# 本地開發
+# 本地
 wrangler d1 migrations apply todo-database
 
-# 生產環境
+# 遠端（生產）
 wrangler d1 migrations apply todo-database --remote
 ```
 
-### 查看資料庫
+### 查詢資料
 ```bash
 wrangler d1 execute todo-database --command "SELECT * FROM todos;"
 ```
 
-## 有用的連結
+## 架構說明（MVC-ish）
 
-- [Cloudflare Workers 文檔](https://developers.cloudflare.com/workers/)
-- [Cloudflare Pages 文檔](https://developers.cloudflare.com/pages/)
-- [Cloudflare D1 文檔](https://developers.cloudflare.com/d1/)
-- [Hono 框架文檔](https://hono.dev/)
+- Routes：`server/routes/*` 只負責路由宣告
+- Controllers：`server/controllers/*` 處理請求解析、商業邏輯、回應格式
+- Repositories：`server/repositories/*` 純資料存取（D1、KV）
+- Types/Model：`server/types.ts` 提供 `Env`、`Todo` 與回應型別
+
+可再進一步加入：
+- `services/`（跨資源交易流程）
+- 請求驗證（如 zod）與統一錯誤處理
+
+## 其他指令
+
+```bash
+# 僅建置（前端 + Workers SSR 產物）
+npm run build-only
+
+# 型別檢查
+npm run type-check
+
+# 產生 Cloudflare 型別（可選）
+npm run cf-typegen
+```
+
+—
+若你需要新增遷移檔，請依你慣用流程建立並放入 `migrations/`（本專案以 D1 為主，這裡不額外生成遷移檔範本）。
