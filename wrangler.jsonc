@@ -8,7 +8,7 @@
 	"compatibility_date": "2025-08-07",
 	"main": "server/index.ts",
 	"assets": {
-		"not_found_handling": "single-page-application",
+		"not_found_handling": "none",
 		"directory": "./dist/client/",
 		"binding": "ASSETS"
 	},

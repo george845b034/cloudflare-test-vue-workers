@@ -6,17 +6,13 @@ type AppContext = Context<{ Bindings: Env }>;
 
 export async function setKv(c: AppContext) {
   try {
-    const body = await c.req.json<{
+    const body = (c.req as any).valid('json') as {
       key: string;
       value: unknown;
       as?: 'text' | 'json';
       ttl?: number;
       metadata?: Record<string, unknown>;
-    }>();
-
-    if (!body || !body.key) {
-      return c.json({ error: 'key 為必填' }, 400);
-    }
+    };
 
     const { key } = body;
     const as = body.as ?? 'text';
@@ -27,58 +23,59 @@ export async function setKv(c: AppContext) {
       await putValue(c.env.KV, { key, value: body.value, as, ttl, metadata });
     } catch (e) {
       if (e instanceof Error && e.message === 'INVALID_JSON') {
-        return c.json({ error: 'value 不是有效的 JSON 字串' }, 400);
+        return c.json({ code: 400, message: 'value 不是有效的 JSON 字串' }, 400);
       }
       throw e;
     }
 
     return c.json({ message: 'OK' });
   } catch (err) {
-    return c.json({ error: 'KV set 失敗' }, 500);
+    return c.json({ code: 500, message: 'KV set 失敗' }, 500);
   }
 }
 
 export async function getKv(c: AppContext) {
   try {
     const key = c.req.param('key');
-    const type = (c.req.query('type') as 'text' | 'json' | undefined) ?? 'text';
-    if (!key) return c.json({ error: 'key 為必填' }, 400);
+    const { type = 'text' } = ((c.req as any).valid('query') as { type?: 'text' | 'json' }) ?? {};
+    if (!key) return c.json({ code: 400, message: 'key 為必填' }, 400);
 
     if (type === 'json') {
       const { value, metadata } = await getJson<any>(c.env.KV, key);
-      if (value === null || value === undefined) return c.json({ error: 'Not Found' }, 404);
-      return c.json({ value, metadata });
+      if (value === null || value === undefined) return c.json({ code: 404, message: 'Not Found' }, 404);
+      return c.json({ value, metadata }, 200);
     }
 
     const { value, metadata } = await getText(c.env.KV, key);
-    if (value === null || value === undefined) return c.json({ error: 'Not Found' }, 404);
-    return c.json({ value, metadata });
+    if (value === null || value === undefined) return c.json({ code: 404, message: 'Not Found' }, 404);
+    return c.json({ value, metadata }, 200);
   } catch (err) {
-    return c.json({ error: 'KV get 失敗' }, 500);
+    return c.json({ code: 500, message: 'KV get 失敗' }, 500);
   }
 }
 
 export async function deleteKv(c: AppContext) {
   try {
     const key = c.req.param('key');
-    if (!key) return c.json({ error: 'key 為必填' }, 400);
+    if (!key) return c.json({ code: 400, message: 'key 為必填' }, 400);
     await deleteKey(c.env.KV, key);
-    return c.json({ message: 'Deleted' });
+    return c.json({ message: 'Deleted' }, 200);
   } catch (err) {
-    return c.json({ error: 'KV delete 失敗' }, 500);
+    return c.json({ code: 500, message: 'KV delete 失敗' }, 500);
   }
 }
 
 export async function listKv(c: AppContext) {
   try {
-    const prefix = c.req.query('prefix') ?? undefined;
-    const cursor = c.req.query('cursor') ?? undefined;
-    const limitStr = c.req.query('limit');
-    const limit = limitStr ? Math.max(1, Math.min(1000, Number(limitStr))) : undefined;
+    const { prefix, cursor, limit } = ((c.req as any).valid('query') as {
+      prefix?: string;
+      cursor?: string;
+      limit?: number;
+    }) ?? {};
     const result = await listKeys(c.env.KV, { prefix, cursor, limit });
-    return c.json(result);
+    return c.json(result, 200);
   } catch (err) {
-    return c.json({ error: 'KV list 失敗' }, 500);
+    return c.json({ code: 500, message: 'KV list 失敗' }, 500);
   }
 }
 

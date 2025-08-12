@@ -25,13 +25,18 @@ export async function kvSet(body: KvSetRequestBody): Promise<{ message: string }
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  return response.json()
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error((data && (data.message || data.error)) || `HTTP ${response.status}`)
+  }
+  return data
 }
 
 export async function kvGet<T = unknown>(key: string, type: KvValueType): Promise<KvGetResponse<T>> {
   const response = await fetch(`/api/kv/get/${encodeURIComponent(key)}?type=${type}`)
   if (!response.ok) {
-    throw new Error(`Get failed: ${response.status}`)
+    const data = await response.json().catch(() => null)
+    throw new Error((data && (data.message || data.error)) || `Get failed: ${response.status}`)
   }
   return response.json()
 }
@@ -40,7 +45,11 @@ export async function kvDelete(key: string): Promise<{ message: string } | { err
   const response = await fetch(`/api/kv/${encodeURIComponent(key)}`, {
     method: 'DELETE',
   })
-  return response.json()
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error((data && (data.message || data.error)) || `HTTP ${response.status}`)
+  }
+  return data
 }
 
 export async function kvList(params: { prefix?: string; limit?: number; cursor?: string }): Promise<KvListResponse> {
@@ -50,7 +59,8 @@ export async function kvList(params: { prefix?: string; limit?: number; cursor?:
   if (params.cursor) query.set('cursor', params.cursor)
   const response = await fetch(`/api/kv/list?${query.toString()}`)
   if (!response.ok) {
-    throw new Error(`List failed: ${response.status}`)
+    const data = await response.json().catch(() => null)
+    throw new Error((data && (data.message || data.error)) || `List failed: ${response.status}`)
   }
   return response.json()
 }

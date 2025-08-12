@@ -7,10 +7,10 @@ export class TodoApi {
   static async getAllTodos(): Promise<Todo[]> {
     try {
       const response = await fetch(`${API_BASE}/todos`);
-      const data: TodoResponse = await response.json();
+      const data: any = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
       }
       
       return data.todos || [];
@@ -24,10 +24,10 @@ export class TodoApi {
   static async getTodo(id: number): Promise<Todo> {
     try {
       const response = await fetch(`${API_BASE}/todos/${id}`);
-      const data: TodoResponse = await response.json();
+      const data: any = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
       }
       
       if (!data.todo) {
@@ -52,10 +52,10 @@ export class TodoApi {
         body: JSON.stringify(todo),
       });
       
-      const data: TodoResponse = await response.json();
+      const data: any = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
       }
       
       if (!data.todo) {
@@ -80,10 +80,10 @@ export class TodoApi {
         body: JSON.stringify(todo),
       });
       
-      const data: TodoResponse = await response.json();
+      const data: any = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
       }
       
       if (!data.todo) {
@@ -104,10 +104,10 @@ export class TodoApi {
         method: 'DELETE',
       });
       
-      const data: TodoResponse = await response.json();
+      const data: any = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
@@ -122,10 +122,10 @@ export class TodoApi {
         method: 'PATCH',
       });
       
-      const data: TodoResponse = await response.json();
+      const data: any = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
       }
       
       if (!data.todo) {
